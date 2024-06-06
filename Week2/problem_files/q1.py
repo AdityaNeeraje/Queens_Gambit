@@ -131,6 +131,48 @@ class History:
         # Feel free to implement this in anyway if needed
         pass
 
+def fill_mdp_up_to_equivalence(state, result):
+    global mdp
+    if result==0:
+        sign=1
+    else:      
+        sign=result/abs(result)
+    result=abs(result)
+    digits=[state%3, (state//3)%3, (state//9)%3, (state//27)%3, (state//81)%3, (state//243)%3, (state//729)%3, (state//2187)%3, (state//6561)%3]
+    powers=[1, 3, 9, 27, 81, 243, 729, 2187, 6561]
+    if result==10:
+        mdp[sum([digits[i]*powers[i] for i in range(9)])]=10
+        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=10
+        mdp[sum([digits[i]*powers[3*(i%3)+2-i//3] for i in range(9)])]=10
+        mdp[sum([digits[i]*powers[3*(2-i//3)+2-i%3] for i in range(9)])]=10
+        mdp[sum([digits[i]*powers[3*(i//3)+2-i%3] for i in range(9)])]=10
+        mdp[sum([digits[i]*powers[3*(i%3)+i//3] for i in range(9)])]=10
+        mdp[sum([digits[i]*powers[3*(2-i//3)+i%3] for i in range(9)])]=10
+        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=10
+    else:
+        mdp[sum([digits[i]*powers[i] for i in range(9)])]=sign*result
+        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=sign*(3*(2-(result-1)%3)+(result-1)//3+1) # Reflection about the vertical
+        mdp[sum([digits[i]*powers[3*(i%3)+2-i//3] for i in range(9)])]=sign*(3*((result-1)%3)+2-(result-1)//3+1)  # Rotation 90 degree
+        mdp[sum([digits[i]*powers[3*(2-i//3)+2-i%3] for i in range(9)])]=sign*(3*(2-(result-1)//3)+2-(result-1)%3+1) # Reflection about the diagonal from 0 to 8
+        mdp[sum([digits[i]*powers[3*(i//3)+2-i%3] for i in range(9)])]=sign*(3*((result-1)//3)+2-(result-1)%3+1) # Rotation 180 degree
+        mdp[sum([digits[i]*powers[3*(i%3)+i//3] for i in range(9)])]=sign*(3*((result-1)%3)+(result-1)//3+1)    # Reflection about the horizontal
+        mdp[sum([digits[i]*powers[3*(2-i//3)+i%3] for i in range(9)])]=sign*(3*(2-(result-1)//3)+(result-1)%3+1) # Rotation 270 degree
+        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=sign*(3*(2-(result-1)%3)+(result-1)//3+1) # Reflection about the diagonal from 2 to 6
+
+
+def permutation(lst):
+    if len(lst)==0:
+        return []
+    if len(lst)==1:
+        return [lst]
+    l=[]
+    for i in range(len(lst)):
+        m=lst[i]
+        remLst=lst[:i]+lst[i+1:]
+        for p in permutation(remLst):
+            l.append([m]+p)
+    return l
+
 
 def backward_induction(history_obj):
     """
@@ -159,60 +201,85 @@ def backward_induction(history_obj):
         elif board[i] == 'o':
             state-=3**(8-i)
     # If the state already has its strategy mapped out, then we know if it is a N win or a P win. In mdp, to save space, let us only store the value of the equivalent position
-    if state in strategy_dict_x:
+    if state in mdp:
         return mdp[state]
     # If the state is a win, then it has never been reached before. Hence we generate all equivalent positions
     if history_obj.is_win():
-        # generate_equivalent_positions(state)
-        mdp[state]=1 # prev win
-        if history_obj.player == 'x':
-            strategy_dict_x[state] = {}
-        else:
-            strategy_dict_o[state] = {}
+        fill_mdp_up_to_equivalence(state, 10)
         return 1
     substates = [History(history_obj.history + [str(char)]) for char in range(9) if str(char) not in history_obj.history]
     if len(substates) == 0:
-        # if state not in equivalent_positions:
-        #     generate_equivalent_positions(state)
-        mdp[state]=0
-        strategy_dict_o[state] = {}
+        fill_mdp_up_to_equivalence(state, 0)
         return 0
-    # generate_equivalent_positions(state)
     for substate in substates:
-        if backward_induction(substate) == 1:
-            if history_obj.player == 'x':
-                strategy_dict_x[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
-            else:
-                strategy_dict_o[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
-            mdp[state]=-1
+        if backward_induction(substate) >= 1:
+            fill_mdp_up_to_equivalence(state, -(int(substate.history[-1])+1))
             return -1
         if backward_induction(substate) == 0:
-            if history_obj.player == 'x':
-                strategy_dict_x[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
-            else:
-                strategy_dict_o[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
-            mdp[state]=0           
+            mdp[state]=0          
     if mdp.get(state) == 0:
         return 0
-    if history_obj.player == 'x':
-        strategy_dict_x[state] = {str(char): 0 if char != 0 else 1 for char in range(9)}
-    else:
-        strategy_dict_o[state] = {str(char): 0 if char != 0 else 1 for char in range(9)}
-    mdp[state]=1
+    fill_mdp_up_to_equivalence(state, int(substates[0].history[-1])+1)
+    if state==(3**9-1)//2:
+        for stored_state in mdp:
+            if mdp.get(stored_state) == 10:
+                continue
+            given_state=stored_state
+            x_positions=[]
+            o_positions=[]
+            for i in range(9):
+                if given_state%3==2:
+                    x_positions.append(8-i)
+                elif given_state%3==0:
+                    o_positions.append(8-i)
+                given_state//=3
+        x_perms=permutation(x_positions)
+        o_perms=permutation(o_positions)
+        for x_perm in x_perms:
+            for o_perm in o_perms:
+                if len(x_perms) > len(o_perms):
+                    sequence=str(x_perm[0])+"".join([str(o_perm[i])+str(x_perm[i+1]) for i in range(len(o_perm))])
+                    if mdp.get(stored_state) == 0:
+                        mdp[sequence]={i: 0 if i != 0 else 1 for i in range(9)}
+                    else
+                    strategy_dict_x[sequence]={}
+                # sequence=[str(x_perm[i])+str(o_perm[i]) if i < len(o_perm) else str(x_perm[i]) for i in range(len(x_perm))]
+                # sequence="".join(sequence)
     return 1
-    # TODO implement
 
+def test_to_ensure_all_states_are_mapped():
+    with open('mdp.json', 'r') as f:
+        data=json.load(f)
+    array=list(range(9))
+    perms=permutation(array)
+    for perm in perms:
+        history=History(perm)
+        if history.board.count('o')>history.board.count('x'):
+            continue
+        if history.is_win() or history.is_draw():
+            continue
+        state=(3**9-1)//2
+        for i in range(9):
+            if history.board[i] == 'x':
+                state+=3**(8-i)
+            elif history.board[i] == 'o':
+                state-=3**(8-i)
+        if data.get(state) is None:
+            print(state)
 
 def solve_tictactoe():
     backward_induction(History())
-    with open('./policy_x.json', 'w') as f:
-        json.dump(strategy_dict_x, f)
-    with open('./policy_o.json', 'w') as f:
-        json.dump(strategy_dict_o, f)
+    # with open('./policy_x.json', 'w') as f:
+    #     json.dump(strategy_dict_x, f)
+    # with open('./policy_o.json', 'w') as f:
+    #     json.dump(strategy_dict_o, f)
+    with open('mdp.json', 'w') as f:
+        json.dump(mdp, f)
     return strategy_dict_x, strategy_dict_o
 
 
 if __name__ == "__main__":
     logging.info("Start")
-    solve_tictactoe()
+    # solve_tictactoe()
+    test_to_ensure_all_states_are_mapped()
     logging.info("End")
