@@ -10,7 +10,26 @@ logging.basicConfig(format='%(levelname)s - %(asctime)s - %(message)s', datefmt=
 # Mapping from histories (str) to probability distribution over actions
 strategy_dict_x = {}
 strategy_dict_o = {}
+equivalent_positions = {}
+mdp={}
 
+def generate_equivalent_positions(state):
+    global equivalent_positions
+    if state in equivalent_positions:
+        return equivalent_positions[state]
+    equivalent_states = [(state, 0)]
+    powers=[1, 3, 9, 27, 81, 243, 729, 2187, 6561]
+    digits=[state%3, (state//3)%3, (state//9)%3, (state//27)%3, (state//81)%3, (state//243)%3, (state//729)%3, (state//2187)%3, (state//6561)%3]
+    equivalent_states.append((sum([digits[i]*powers[3*(i//3)+2-i%3] for i in range(9)]), 2)) # Reflection about the vertical
+    equivalent_states.append((sum([digits[i]*powers[3*(i%3)+i//3] for i in range(9)]), 3)) # Rotation 90 degree
+    equivalent_states.append((sum([digits[i]*powers[3*(i%3)+2-i//3] for i in range(9)]), 4)) # Reflection about the diagonal from 0 to 8
+    equivalent_states.append((sum([digits[i]*powers[3*(2-i//3)+2-i%3] for i in range(9)]), 5)) # Rotation 180 degree
+    equivalent_states.append((sum([digits[i]*powers[3*(2-i//3)+i%3] for i in range(9)]), 6)) # Reflection about the horizontal
+    equivalent_states.append((sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)]), 7)) # Rotation 270 degree
+    equivalent_states.append((sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)]), 8)) # Reflection about the diagonal from 2 to 6
+    min_state = min(equivalent_states, key=lambda x: x[0])
+    for state in equivalent_states:
+        equivalent_positions[state[0]] = (min_state[0], (state[1]-min_state[1])%8)
 
 class History:
     def __init__(self, history=None):
@@ -65,23 +84,33 @@ class History:
 
         :return: list Eg: ['x', '0', 'x', '0', 'o', 'o', '0', '0', '0']
         """
-        board = ['0', '0', '0', '0', '0', '0', '0', '0', '0']
+        board=['0']*9
         for i in range(len(self.history)):
             if i % 2 == 0:
-                board[self.history[i]] = 'x'
+                board[int(self.history[i])] = 'x'
             else:
-                board[self.history[i]] = 'o'
+                board[int(self.history[i])] = 'o'
         return board
 
     def is_win(self):
-        # check if the board position is a win for either players
-        # Feel free to implement this in anyway if needed
-        pass
+        for i in range(3):
+            if self.board[3*i] != '0' and self.board[3*i] == self.board[3*i+1] == self.board[3*i+2]:
+                return True
+        for i in range(3):
+            if self.board[i] != '0' and self.board[i] == self.board[3+i] == self.board[6+i]:
+                return True
+        if self.board[0] != '0' and self.board[0]==self.board[4]==self.board[8]:
+            return True
+        if self.board[2] != '0' and self.board[2]==self.board[4]==self.board[6]:
+            return True
+        return False
 
     def is_draw(self):
-        # check if the board position is a draw
-        # Feel free to implement this in anyway if needed
-        pass
+        if self.board.count('0') != 0:
+            return False
+        if not self.is_win():
+            return True
+        return False
 
     def get_valid_actions(self):
         # get the empty squares from the board
@@ -106,9 +135,9 @@ class History:
 def backward_induction(history_obj):
     """
     :param history_obj: Histroy class object
-    :return: best achievable utility (float) for th current history_obj
+    :return: best achievable utility (float) for the current history_obj
     """
-    global strategy_dict_x, strategy_dict_o
+    global strategy_dict_x, strategy_dict_o, mdp
     # TODO implement
     # (1) Implement backward induction for tictactoe
     # (2) Update the global variables strategy_dict_x or strategy_dict_o which are a mapping from histories to
@@ -122,7 +151,55 @@ def backward_induction(history_obj):
     # actions. But since tictactoe is a PIEFG, there always exists an optimal deterministic strategy (SPNE). So your
     # policy will be something like this {"0": 1, "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0} where
     # "0" was the one of the best actions for the current player/history.
-    return -2
+    board=history_obj.get_board()
+    state=(3**9-1)//2
+    for i in range(9):
+        if board[i] == 'x':
+            state+=3**(8-i)
+        elif board[i] == 'o':
+            state-=3**(8-i)
+    # If the state already has its strategy mapped out, then we know if it is a N win or a P win. In mdp, to save space, let us only store the value of the equivalent position
+    if state in strategy_dict_x:
+        return mdp[state]
+    # If the state is a win, then it has never been reached before. Hence we generate all equivalent positions
+    if history_obj.is_win():
+        # generate_equivalent_positions(state)
+        mdp[state]=1 # prev win
+        if history_obj.player == 'x':
+            strategy_dict_x[state] = {}
+        else:
+            strategy_dict_o[state] = {}
+        return 1
+    substates = [History(history_obj.history + [str(char)]) for char in range(9) if str(char) not in history_obj.history]
+    if len(substates) == 0:
+        # if state not in equivalent_positions:
+        #     generate_equivalent_positions(state)
+        mdp[state]=0
+        strategy_dict_o[state] = {}
+        return 0
+    # generate_equivalent_positions(state)
+    for substate in substates:
+        if backward_induction(substate) == 1:
+            if history_obj.player == 'x':
+                strategy_dict_x[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
+            else:
+                strategy_dict_o[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
+            mdp[state]=-1
+            return -1
+        if backward_induction(substate) == 0:
+            if history_obj.player == 'x':
+                strategy_dict_x[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
+            else:
+                strategy_dict_o[state] = {str(char): 0 if str(char) != substate.history[-1] else 1 for char in range(9)}
+            mdp[state]=0           
+    if mdp.get(state) == 0:
+        return 0
+    if history_obj.player == 'x':
+        strategy_dict_x[state] = {str(char): 0 if char != 0 else 1 for char in range(9)}
+    else:
+        strategy_dict_o[state] = {str(char): 0 if char != 0 else 1 for char in range(9)}
+    mdp[state]=1
+    return 1
     # TODO implement
 
 
