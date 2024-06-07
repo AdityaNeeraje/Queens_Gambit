@@ -216,55 +216,14 @@ def backward_induction(history_obj):
         return 0
     for substate in substates:
         result=backward_induction(substate)
-        # if state==17569:
-        #     print(substate.history[-1])
-        #     print(result)
         if result >= 1:
             fill_mdp_up_to_equivalence(state, -(int(substate.history[-1])+1))
             return -1
         if result == 0:
             mdp[state]=(int(substate.history[-1])+1)/10          
     if mdp.get(state) is not None and mdp.get(state) >= 0:
-        return 0
         if state==(3**9-1)//2:
-            for stored_state in mdp:
-                if mdp.get(stored_state) == 10 or mdp.get(stored_state) == 0:
-                    continue
-                given_state=stored_state
-                x_positions=[]
-                o_positions=[]
-                for i in range(9):
-                    if given_state%3==2:
-                        x_positions.append(8-i)
-                    elif given_state%3==0:
-                        o_positions.append(8-i)
-                    given_state//=3
-            x_perms=permutation(x_positions)
-            o_perms=permutation(o_positions)
-            for x_perm in x_perms:
-                for o_perm in o_perms:
-                    if len(x_perms) > len(o_perms):
-                        sequence=str(x_perm[0])+"".join([str(o_perm[i])+str(x_perm[i+1]) for i in range(len(o_perm))])
-                        if mdp.get(stored_state) < 0:
-                            strategy_dict_o[sequence]={i: 0 for i in range(1,10)}
-                            strategy_dict_o[sequence][-mdp.get(stored_state)]=1
-                        elif mdp.get(stored_state) < 1:
-                            strategy_dict_o[sequence]={i: 0 for i in range(1, 10)}
-                            strategy_dict_o[sequence][mdp.get(stored_state)*10]=1
-                        else:
-                            strategy_dict_o[sequence]={i: 0 for i in range(1, 10)}
-                            strategy_dict_o[sequence][mdp.get(stored_state)]=1
-                    else:
-                        sequence="".join([str(x_perm[i]) + str(o_perm[i]) for i in range(len(o_perm))])
-                        if mdp.get(stored_state) < 0:
-                            strategy_dict_x[sequence]={i: 0 for i in range(1,10)}
-                            strategy_dict_x[sequence][-mdp.get(stored_state)]=1
-                        elif mdp.get(stored_state) < 1:
-                            strategy_dict_x[sequence]={i: 0 for i in range(1, 10)}
-                            strategy_dict_x[sequence][mdp.get(stored_state)*10]=1
-                        else:
-                            strategy_dict_x[sequence]={i: 0 for i in range(1, 10)}
-                            strategy_dict_x[sequence][mdp.get(stored_state)]=1
+            fill_policies()
         return 0
     fill_mdp_up_to_equivalence(state, int(substates[0].history[-1])+1)
     return 1
@@ -291,20 +250,19 @@ def test_to_ensure_all_states_are_mapped():
 
 def solve_tictactoe():
     backward_induction(History())
-    # with open('./policy_x.json', 'w') as f:
-    #     json.dump(strategy_dict_x, f)
-    # with open('./policy_o.json', 'w') as f:
-        # json.dump(strategy_dict_o, f)
+    with open('./policy_x.json', 'w') as f:
+        json.dump(strategy_dict_x, f)
+    with open('./policy_o.json', 'w') as f:
+        json.dump(strategy_dict_o, f)
     with open('mdp.json', 'w') as f:
         json.dump(mdp, f)
     return strategy_dict_x, strategy_dict_o
 
 
 def fill_policies():
-    with open('mdp.json', 'r') as f:
-        mdp=json.load(f)
-    for stored_state in list(mdp.keys()):
-        if mdp.get(stored_state) == 10 or mdp.get(stored_state) == 0:
+    global strategy_dict_x, strategy_dict_o, mdp
+    for stored_state, value in mdp.items():
+        if value == 10 or value == 0:
             continue
         given_state=int(stored_state)
         x_positions=[]
@@ -315,6 +273,30 @@ def fill_policies():
             elif given_state%3==0:
                 o_positions.append(8-i)
             given_state//=3
+        if len(x_positions) == 0:
+            sequence=""
+            if value < 0:
+                strategy_dict_x[sequence]={i: 0 for i in range(9)}
+                strategy_dict_x[sequence][(-value)-1]=1
+            elif value < 1:
+                strategy_dict_x[sequence]={i: 0 for i in range(9)}
+                strategy_dict_x[sequence][int(value*10)-1]=1
+            else:
+                strategy_dict_x[sequence]={i: 0 for i in range(9)}
+                strategy_dict_x[sequence][value-1]=1
+            continue
+        if len(o_positions)==0:
+            sequence=str(x_positions[0])
+            if value < 0:
+                strategy_dict_o[sequence]={i: 0 for i in range(9)}
+                strategy_dict_o[sequence][(-value)-1]=1
+            elif value < 1:
+                strategy_dict_o[sequence]={i: 0 for i in range(9)}
+                strategy_dict_o[sequence][int(value*10)-1]=1
+            else:
+                strategy_dict_o[sequence]={i: 0 for i in range(9)}
+                strategy_dict_o[sequence][(value-1)]=1
+            continue
         x_perms=permutation(x_positions)
         o_perms=permutation(o_positions)
         for x_perm in x_perms:
@@ -322,35 +304,27 @@ def fill_policies():
                 if len(x_perms) > len(o_perms):
                     sequence=str(x_perm[0])+"".join([str(o_perm[i])+str(x_perm[i+1]) for i in range(len(o_perm))])
                     if mdp.get(stored_state) < 0:
-                        strategy_dict_o[sequence]={i: 0 for i in range(1,10)}
-                        strategy_dict_o[sequence][-mdp.get(stored_state)]=1
+                        strategy_dict_o[sequence]={i: 0 for i in range(0,9)}
+                        strategy_dict_o[sequence][-value-1]=1
                     elif mdp.get(stored_state) < 1:
-                        strategy_dict_o[sequence]={i: 0 for i in range(1, 10)}
-                        strategy_dict_o[sequence][mdp.get(stored_state)*10]=1
+                        strategy_dict_o[sequence]={i: 0 for i in range(9)}
+                        strategy_dict_o[sequence][int(value*10)-1]=1
                     else:
-                        strategy_dict_o[sequence]={i: 0 for i in range(1, 10)}
-                        strategy_dict_o[sequence][mdp.get(stored_state)]=1
+                        strategy_dict_o[sequence]={i: 0 for i in range(9)}
+                        strategy_dict_o[sequence][value-1]=1
                 else:
                     sequence="".join([str(x_perm[i]) + str(o_perm[i]) for i in range(len(o_perm))])
-                    if sequence=="":
-                        print("YES")
                     if mdp.get(stored_state) < 0:
-                        strategy_dict_x[sequence]={i: 0 for i in range(1,10)}
-                        strategy_dict_x[sequence][-mdp.get(stored_state)]=1
+                        strategy_dict_x[sequence]={i: 0 for i in range(9)}
+                        strategy_dict_x[sequence][(-value)-1]=1
                     elif mdp.get(stored_state) < 1:
-                        strategy_dict_x[sequence]={i: 0 for i in range(1, 10)}
-                        strategy_dict_x[sequence][mdp.get(stored_state)*10]=1
+                        strategy_dict_x[sequence]={i: 0 for i in range(9)}
+                        strategy_dict_x[sequence][int(value*10)-1]=1
                     else:
-                        strategy_dict_x[sequence]={i: 0 for i in range(1, 10)}
-                        strategy_dict_x[sequence][mdp.get(stored_state)]=1
+                        strategy_dict_x[sequence]={i: 0 for i in range(9)}
+                        strategy_dict_x[sequence][value-1]=1
 
 if __name__ == "__main__":
     logging.info("Start")
-    # solve_tictactoe()
-    # test_to_ensure_all_states_are_mapped()
-    fill_policies()
-    with open('./policy_x.json', 'w') as f:
-        json.dump(strategy_dict_x, f)
-    with open('./policy_o.json', 'w') as f:
-        json.dump(strategy_dict_o, f)    
+    solve_tictactoe()
     logging.info("End")
