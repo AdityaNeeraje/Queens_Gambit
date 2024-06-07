@@ -341,6 +341,7 @@ while running:
         if use_policy and not turn:
             board_str = ''.join([str(act) for act in game_history])
             if board_str not in policy.keys():
+                print(board_str)
                 print('Error: You policy does not contain history', board_str)
                 exit(1)
             available_plays = policy[board_str]
