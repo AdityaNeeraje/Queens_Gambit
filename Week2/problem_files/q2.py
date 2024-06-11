@@ -221,24 +221,25 @@ def fill_win_up_to_equivalence(history, result, num_boards):
     state_list=[i for i in range(9*num_boards) if history&(1<<i) > 0]
     for i in range(8**num_boards):
         new_state=sum([1<<(9*(int(character)//9)+funcs[int((i//(8**(int(character)//9)))%8)](int(character)%9)) for character in state_list])
-        winning_moves[new_state]=9*(int(result)//9)+funcs[int((i//(8**(int(result)//9)))%8)](int(result)%9)
+        winning_move=9*(int(result)//9)+funcs[int((i//(8**(int(result)//9)))%8)](int(result)%9)
+        winning_moves[new_state]=winning_move
         if num_boards==2:
             new_state=new_state//512+(new_state%512)*512
-            winning_moves[new_state]=value
+            winning_moves[new_state]=winning_move
         if num_boards==3:
             board1=new_state%512
             board2=(new_state>>9)%512
             board3=new_state>>18
             new_state=board1+(board2<<18)+(board3<<9)
-            winning_moves[new_state]=value
+            winning_moves[new_state]=winning_move
             new_state=board2+(board3<<18)+(board1<<9)
-            winning_moves[new_state]=value
+            winning_moves[new_state]=winning_move
             new_state=board2+(board1<<18)+(board3<<9)
-            winning_moves[new_state]=value
+            winning_moves[new_state]=winning_move
             new_state=board3+(board1<<18)+(board2<<9)
-            winning_moves[new_state]=value
+            winning_moves[new_state]=winning_move
             new_state=board3+(board2<<18)+(board1<<9)
-            winning_moves[new_state]=value
+            winning_moves[new_state]=winning_move
 
 def maxmin(history_obj, max_player_flag):
     """

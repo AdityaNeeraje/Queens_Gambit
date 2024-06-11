@@ -297,9 +297,6 @@ def alpha_beta_pruning(history_obj, alpha, beta, max_player_flag):
                 if mirror in board_positions_val_dict:
                     value, mirror_obj = board_positions_val_dict[mirror]
                     val1 = alpha_beta_pruning(History(history_obj.num_boards, copy.deepcopy(new_history.history)), alpha, beta, False)
-                    if value != val1:
-                        print(val1, value, mirror, new_history.get_boards_str(), mirror_obj.history, new_history.history)
-                        print(mirror_obj.get_valid_actions_(), new_history.get_valid_actions_())
                     found = True
                     break
             if not found:
@@ -337,8 +334,6 @@ def alpha_beta_pruning(history_obj, alpha, beta, max_player_flag):
                 if mirror in board_positions_val_dict:
                     value, mirror_obj = board_positions_val_dict[mirror]
                     val1 = alpha_beta_pruning(new_history, alpha, beta, True)
-                    if value != val1:
-                        print(val1, value, mirror, new_history.get_boards_str(), mirror_obj.history, new_history.history)
                     found = True
                     break
             if not found:
@@ -366,8 +361,6 @@ def maxmin(history_obj, max_player_flag):
     # the key corresponding to self.boards.
     global board_positions_val_dict
     # TODO implement
-    if max_player_flag == (len(history_obj.history) % 2 == 1):
-        print('Hey')
     if history_obj.is_terminal_history():
         if len(history_obj.history) % 2 == 0:
             return -1
@@ -385,8 +378,6 @@ def maxmin(history_obj, max_player_flag):
             if new_history.get_boards_str() in board_positions_val_dict:
                 val, mirror_obj = board_positions_val_dict[new_history.get_boards_str()]
                 val1 = maxmin(new_history, not max_player_flag)
-                if val != val1:
-                    print(val, val1, new_history.get_boards_str(), mirror_obj.get_boards_str(), new_history.history, mirror_obj.history)
             else:
                 val = maxmin(new_history, False)
             # found = False
@@ -404,7 +395,7 @@ def maxmin(history_obj, max_player_flag):
                 max_val = val
                 # best_action = action
         # print(max_val, history_obj.get_boards_str(), history_obj.history)
-        board_positions_val_dict[history_obj.get_boards_str()] = (val, history_obj)
+        board_positions_val_dict[history_obj.get_boards_str()] = (max_val, history_obj)
         # mdp[history_obj.get_boards_str()] = best_action
         return max_val
     else:
@@ -417,8 +408,6 @@ def maxmin(history_obj, max_player_flag):
             if new_history.get_boards_str() in board_positions_val_dict:
                 val, mirror = board_positions_val_dict[new_history.get_boards_str()]
                 val1 = maxmin(new_history, not max_player_flag)
-                if val != val1:
-                    print(val1, val, new_history.get_boards_str(), mirror.get_boards_str(), new_history.history, mirror.history)
             else:
                 val = maxmin(new_history, not max_player_flag)
             # found = False
@@ -433,7 +422,7 @@ def maxmin(history_obj, max_player_flag):
             #     min_val = val
                 # best_action = action
         # print(min_val, history_obj.get_boards_str(), history_obj.history)
-        board_positions_val_dict[history_obj.get_boards_str()] = (val, history_obj)
+        board_positions_val_dict[history_obj.get_boards_str()] = (min_val, history_obj)
         # mdp[history_obj.get_boards_str()] = best_action
         return min_val
     # TODO implement
@@ -452,8 +441,6 @@ if __name__ == "__main__":
     logging.info("alpha beta pruning")
     start_time = time.time()
     value, visited_histories = solve_alpha_beta_pruning(History(history=[], num_boards=2), -math.inf, math.inf, True)
-    print(time.time() - start_time)
-    print(value, len(visited_histories))
     logging.info("maxmin value {}".format(value))
     logging.info("Number of histories visited {}".format(len(visited_histories)))
     logging.info("maxmin memory")
