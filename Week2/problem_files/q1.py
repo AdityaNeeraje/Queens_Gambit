@@ -140,24 +140,23 @@ def fill_mdp_up_to_equivalence(state, result):
     result=abs(result)
     digits=[state%3, (state//3)%3, (state//9)%3, (state//27)%3, (state//81)%3, (state//243)%3, (state//729)%3, (state//2187)%3, (state//6561)%3]
     powers=[1, 3, 9, 27, 81, 243, 729, 2187, 6561]
+    funcs=[
+        lambda i: i, # Identity
+        lambda i: 3*(i//3)+2-i%3, # Reflection about the vertical
+        lambda i: 3*(i%3)+2-i//3, # Rotation 90 degree
+        lambda i: 3*(i%3)+i//3, # Reflection about the diagonal from 0 to 8
+        lambda i: 3*(2-i//3)+2-i%3, # Rotation 180 degree
+        lambda i: 3*(2-i//3)+i%3, # Reflection about the horizontal
+        lambda i: 3*(2-i%3)+i//3, # Rotation 270 degree
+        lambda i: 3*(2-i%3)+2-i//3 # Reflection about the diagonal from 2 to 6
+    ]
     if result==10 or result==0:
-        mdp[sum([digits[i]*powers[i] for i in range(9)])]=result
-        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=result
-        mdp[sum([digits[i]*powers[3*(i%3)+2-i//3] for i in range(9)])]=result
-        mdp[sum([digits[i]*powers[3*(2-i//3)+2-i%3] for i in range(9)])]=result
-        mdp[sum([digits[i]*powers[3*(i//3)+2-i%3] for i in range(9)])]=result
-        mdp[sum([digits[i]*powers[3*(i%3)+i//3] for i in range(9)])]=result
-        mdp[sum([digits[i]*powers[3*(2-i//3)+i%3] for i in range(9)])]=result
-        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=result
+        for function in funcs:
+            mdp[sum([digits[i]*powers[function(i)] for i in range(9)])]=result
     else:
-        mdp[sum([digits[i]*powers[i] for i in range(9)])]=sign*result
-        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=sign*(3*(2-(result-1)%3)+(result-1)//3+1) # Reflection about the vertical
-        mdp[sum([digits[i]*powers[3*(i%3)+2-i//3] for i in range(9)])]=sign*(3*((result-1)%3)+2-(result-1)//3+1)  # Rotation 90 degree
-        mdp[sum([digits[i]*powers[3*(2-i//3)+2-i%3] for i in range(9)])]=sign*(3*(2-(result-1)//3)+2-(result-1)%3+1) # Reflection about the diagonal from 0 to 8
-        mdp[sum([digits[i]*powers[3*(i//3)+2-i%3] for i in range(9)])]=sign*(3*((result-1)//3)+2-(result-1)%3+1) # Rotation 180 degree
-        mdp[sum([digits[i]*powers[3*(i%3)+i//3] for i in range(9)])]=sign*(3*((result-1)%3)+(result-1)//3+1)    # Reflection about the horizontal
-        mdp[sum([digits[i]*powers[3*(2-i//3)+i%3] for i in range(9)])]=sign*(3*(2-(result-1)//3)+(result-1)%3+1) # Rotation 270 degree
-        mdp[sum([digits[i]*powers[3*(2-i%3)+i//3] for i in range(9)])]=sign*(3*(2-(result-1)%3)+(result-1)//3+1) # Reflection about the diagonal from 2 to 6
+        for function in funcs:
+            mdp[sum([digits[i]*powers[function(i)] for i in range(9)])]=sign*function(result-1)
+        return
 
 def permutation(lst):
     if len(lst)==0:
