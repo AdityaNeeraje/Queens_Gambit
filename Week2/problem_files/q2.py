@@ -169,21 +169,76 @@ def alpha_beta_pruning(history_obj, alpha, beta, max_player_flag):
 
 def fill_up_to_equivalence(history, value, num_boards):
     global board_positions_val_dict
-    board_positions_val_dict[history]=value
-    # funcs=[
-    #     lambda i: i, # Identity
-    #     lambda i: 3*(i//3)+2-i%3, # Reflection about the vertical
-    #     lambda i: 3*(i%3)+2-i//3, # Rotation 90 degree
-    #     lambda i: 3*(i%3)+i//3, # Reflection about the diagonal from 0 to 8
-    #     lambda i: 3*(2-i//3)+2-i%3, # Rotation 180 degree
-    #     lambda i: 3*(2-i//3)+i%3, # Reflection about the horizontal
-    #     lambda i: 3*(2-i%3)+i//3, # Rotation 270 degree
-    #     lambda i: 3*(2-i%3)+2-i//3 # Reflection about the diagonal from 2 to 6
-    # ]
-    # state_list=[i for i in range(9*num_boards) if history&(1<<i) > 0]
-    # for i in range(8**num_boards):
-    #     new_state=sum([1<<(9*(int(character)//9)+funcs[int((i//(8**(int(character)//9)))%8)](int(character)%9)) for character in state_list])
-    #     board_positions_val_dict[new_state]=value
+    # board_positions_val_dict[history]=value
+    # return
+    funcs=[
+        lambda i: i, # Identity
+        lambda i: 3*(i//3)+2-i%3, # Reflection about the vertical
+        lambda i: 3*(i%3)+2-i//3, # Rotation 90 degree
+        lambda i: 3*(i%3)+i//3, # Reflection about the diagonal from 0 to 8
+        lambda i: 3*(2-i//3)+2-i%3, # Rotation 180 degree
+        lambda i: 3*(2-i//3)+i%3, # Reflection about the horizontal
+        lambda i: 3*(2-i%3)+i//3, # Rotation 270 degree
+        lambda i: 3*(2-i%3)+2-i//3 # Reflection about the diagonal from 2 to 6
+    ]
+    state_list=[i for i in range(9*num_boards) if history&(1<<i) > 0]
+    for i in range(8**num_boards):
+        new_state=sum([1<<(9*(int(character)//9)+funcs[int((i//(8**(int(character)//9)))%8)](int(character)%9)) for character in state_list])
+        board_positions_val_dict[new_state]=value
+        if num_boards==2:
+            new_state=new_state//512+(new_state%512)*512
+            board_positions_val_dict[new_state]=value
+        if num_boards==3:
+            board1=new_state%512
+            board2=(new_state>>9)%512
+            board3=new_state>>18
+            new_state=board1+(board2<<18)+(board3<<9)
+            board_positions_val_dict[new_state]=value
+            new_state=board2+(board3<<18)+(board1<<9)
+            board_positions_val_dict[new_state]=value
+            new_state=board2+(board1<<18)+(board3<<9)
+            board_positions_val_dict[new_state]=value
+            new_state=board3+(board1<<18)+(board2<<9)
+            board_positions_val_dict[new_state]=value
+            new_state=board3+(board2<<18)+(board1<<9)
+            board_positions_val_dict[new_state]=value
+
+
+def fill_win_up_to_equivalence(history, result, num_boards):
+    global winning_moves
+    # winning_moves[history]=value
+    # return
+    funcs=[
+        lambda i: i, # Identity
+        lambda i: 3*(i//3)+2-i%3, # Reflection about the vertical
+        lambda i: 3*(i%3)+2-i//3, # Rotation 90 degree
+        lambda i: 3*(i%3)+i//3, # Reflection about the diagonal from 0 to 8
+        lambda i: 3*(2-i//3)+2-i%3, # Rotation 180 degree
+        lambda i: 3*(2-i//3)+i%3, # Reflection about the horizontal
+        lambda i: 3*(2-i%3)+i//3, # Rotation 270 degree
+        lambda i: 3*(2-i%3)+2-i//3 # Reflection about the diagonal from 2 to 6
+    ]
+    state_list=[i for i in range(9*num_boards) if history&(1<<i) > 0]
+    for i in range(8**num_boards):
+        new_state=sum([1<<(9*(int(character)//9)+funcs[int((i//(8**(int(character)//9)))%8)](int(character)%9)) for character in state_list])
+        winning_moves[new_state]=9*(int(result)//9)+funcs[int((i//(8**(int(result)//9)))%8)](int(result)%9)
+        if num_boards==2:
+            new_state=new_state//512+(new_state%512)*512
+            winning_moves[new_state]=value
+        if num_boards==3:
+            board1=new_state%512
+            board2=(new_state>>9)%512
+            board3=new_state>>18
+            new_state=board1+(board2<<18)+(board3<<9)
+            winning_moves[new_state]=value
+            new_state=board2+(board3<<18)+(board1<<9)
+            winning_moves[new_state]=value
+            new_state=board2+(board1<<18)+(board3<<9)
+            winning_moves[new_state]=value
+            new_state=board3+(board1<<18)+(board2<<9)
+            winning_moves[new_state]=value
+            new_state=board3+(board2<<18)+(board1<<9)
+            winning_moves[new_state]=value
 
 def maxmin(history_obj, max_player_flag):
     """
@@ -212,7 +267,7 @@ def maxmin(history_obj, max_player_flag):
                 max_val=new_value
                 winning_move=action
         fill_up_to_equivalence(history_obj.history, max_val, history_obj.num_boards)
-        winning_moves[history_obj.history]=winning_move
+        fill_win_up_to_equivalence(history_obj.history, winning_move, history_obj.num_boards)
         return max_val
     else:
         min_val=2
@@ -223,7 +278,7 @@ def maxmin(history_obj, max_player_flag):
                 min_val=new_value
                 winning_move=action
         fill_up_to_equivalence(history_obj.history, min_val, history_obj.num_boards)
-        winning_moves[history_obj.history]=winning_move
+        fill_win_up_to_equivalence(history_obj.history, winning_move, history_obj.num_boards)
         return min_val
 
 def solve_alpha_beta_pruning(history_obj, alpha, beta, max_player_flag):
@@ -234,7 +289,7 @@ def solve_alpha_beta_pruning(history_obj, alpha, beta, max_player_flag):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2 or not sys.argv[1].isdigit() or int(sys.argv[1])<1 or int(sys.argv[1])>3:
-        n=1
+        n=2
     else:
         n=int(sys.argv[1])
     logging.info("start")
