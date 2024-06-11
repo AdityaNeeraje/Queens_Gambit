@@ -242,7 +242,6 @@ if __name__ == "__main__":
     value, visited_histories = solve_alpha_beta_pruning(History(history=0, num_boards=n), -math.inf, math.inf, True)
     logging.info("maxmin value {}".format(value))
     logging.info("Number of histories visited {}".format(len(visited_histories)))
-    logging.info("maxmin memory")
     logging.info("maxmin value {}".format(maxmin(History(history=0, num_boards=n), True)))
     output_dict={}
     # print(len(board_positions_val_dict))
