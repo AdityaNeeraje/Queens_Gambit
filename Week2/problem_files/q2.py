@@ -203,7 +203,6 @@ def fill_up_to_equivalence(history, value, num_boards):
             new_state=board3+(board2<<18)+(board1<<9)
             board_positions_val_dict[new_state]=value
 
-
 def fill_win_up_to_equivalence(history, result, num_boards):
     global winning_moves
     # winning_moves[history]=value
@@ -225,21 +224,46 @@ def fill_win_up_to_equivalence(history, result, num_boards):
         winning_moves[new_state]=winning_move
         if num_boards==2:
             new_state=new_state//512+(new_state%512)*512
-            winning_moves[new_state]=winning_move
+            winning_moves[new_state]=winning_move%9+(9-9*(winning_move//9))
         if num_boards==3:
             board1=new_state%512
             board2=(new_state>>9)%512
             board3=new_state>>18
-            new_state=board1+(board2<<18)+(board3<<9)
-            winning_moves[new_state]=winning_move
-            new_state=board2+(board3<<18)+(board1<<9)
-            winning_moves[new_state]=winning_move
-            new_state=board2+(board1<<18)+(board3<<9)
-            winning_moves[new_state]=winning_move
-            new_state=board3+(board1<<18)+(board2<<9)
-            winning_moves[new_state]=winning_move
-            new_state=board3+(board2<<18)+(board1<<9)
-            winning_moves[new_state]=winning_move
+            new_state=(board2<<18)+(board3<<9)+board1
+            if winning_move//9==1:
+                winning_moves[new_state]=winning_move+9
+            elif winning_move//9==2:
+                winning_moves[new_state]=winning_move-9
+            else:
+                winning_moves[new_state]=winning_move
+            new_state=(board3<<18)+(board1<<9)+board2
+            if winning_move//9==1:
+                winning_moves[new_state]=winning_move-9
+            elif winning_move//9==2:
+                winning_moves[new_state]=winning_move
+            else:
+                winning_moves[new_state]=winning_move+9
+            new_state=(board1<<18)+(board3<<9)+board2
+            if winning_move//9==1:
+                winning_moves[new_state]=winning_move-9
+            elif winning_move//9==2:
+                winning_moves[new_state]=winning_move-9
+            else:
+                winning_moves[new_state]=winning_move+18
+            new_state=(board1<<18)+(board2<<9)+board3
+            if winning_move//9==1:
+                winning_moves[new_state]=winning_move
+            elif winning_move//9==2:
+                winning_moves[new_state]=winning_move-18
+            else:
+                winning_moves[new_state]=winning_move+18
+            new_state=(board2<<18)+(board1<<9)+board3
+            if winning_move//9==1:
+                winning_moves[new_state]=winning_move+9
+            elif winning_move//9==2:
+                winning_moves[new_state]=winning_move-18
+            else:
+                winning_moves[new_state]=winning_move+9
 
 def maxmin(history_obj, max_player_flag):
     """

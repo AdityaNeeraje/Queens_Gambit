@@ -297,6 +297,9 @@ def alpha_beta_pruning(history_obj, alpha, beta, max_player_flag):
                 if mirror in board_positions_val_dict:
                     value, mirror_obj = board_positions_val_dict[mirror]
                     val1 = alpha_beta_pruning(History(history_obj.num_boards, copy.deepcopy(new_history.history)), alpha, beta, False)
+                    if value != val1:
+                        print(val1, value, mirror, new_history.get_boards_str(), mirror_obj.history, new_history.history)
+                        print(mirror_obj.get_valid_actions_(), new_history.get_valid_actions_())
                     found = True
                     break
             if not found:
@@ -334,6 +337,8 @@ def alpha_beta_pruning(history_obj, alpha, beta, max_player_flag):
                 if mirror in board_positions_val_dict:
                     value, mirror_obj = board_positions_val_dict[mirror]
                     val1 = alpha_beta_pruning(new_history, alpha, beta, True)
+                    if value != val1:
+                        print(val1, value, mirror, new_history.get_boards_str(), mirror_obj.history, new_history.history)
                     found = True
                     break
             if not found:
