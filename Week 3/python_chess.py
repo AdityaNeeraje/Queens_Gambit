@@ -159,6 +159,7 @@ def order_moves(board_obj, white_to_play):
         board_obj.pop()
         resulting_list.append(action)
         moves_value[move]-=dictionary_of_positions[chess.parse_square(move[2:4])]
+        moves_value[move]*=1000
     return list(sorted(resulting_list, key=lambda action: -moves_value[str(action)]))
 
 
@@ -174,21 +175,21 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
     :return: float
     """
     global dictionary_of_positions
-    if board_obj.is_checkmate():
-        if max_player_flag:
-            return -2000
-        else:
-            return 2000
-    if board_obj.is_check() and len([action for action in board_obj.legal_moves])==0:
-        print(board_obj)
-        return 0
-    if board_obj.is_stalemate() or depth==0:
+    if depth==0:
         if board_obj.turn == max_player_flag:
             result = value_for_white(board_obj)
             return result
         else:
             result = -value_for_white(board_obj)
             return result
+    if board_obj.is_game_over():
+        if board_obj.is_checkmate():
+            if max_player_flag:
+                return -math.inf
+            else:
+                return math.inf
+        if board_obj.is_stalemate():
+            return 0
     if max_player_flag:
         best=-math.inf
         for action in order_moves(board_obj, max_player_flag):
@@ -220,7 +221,7 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
             dictionary_of_positions[moved_to]=value_of_piece_moved
             board_obj.push(action)
             best=min(best, alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1))
-            alpha=min(alpha, best)
+            beta=min(beta, best)
             board_obj.pop()
             dictionary_of_positions[moved_from]=value_of_piece_moved
             dictionary_of_positions[moved_to]=value_of_piece_captured
