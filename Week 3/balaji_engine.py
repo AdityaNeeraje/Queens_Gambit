@@ -5,6 +5,7 @@ import math
 import numpy as np
 
 storage = dict()
+counter=0
 
 class Engine:
     """A class to represent a chess engine written by Balaji."""
@@ -246,7 +247,8 @@ class Engine:
 
     def alpha_beta_pruning(self, alpha, beta, depth, max_player) -> tuple:
         """Returns the evaluation of the current board position and the best move for the current player, using alpha-beta pruning with a depth of `depth`, and the player to maximize the evaluation is `max_player`."""
-        global storage
+        global storage, counter
+        counter += 1
         # print(self.hash)
         if depth == 0 or self.board.is_game_over():
             return self.eval(max_player), None
@@ -258,6 +260,7 @@ class Engine:
             for move in self.get_ordered_moves():
                 new = self.get_child(move)
                 if (new.hash) in storage:
+                    counter+=1
                     eval, _move = storage[new.hash]
                 else:
                     eval, _move = new.alpha_beta_pruning(alpha, beta, depth - 1, not max_player)
@@ -275,6 +278,7 @@ class Engine:
             for move in self.get_ordered_moves():
                 new = self.get_child(move)
                 if (new.hash) in storage:
+                    counter+=1
                     eval, _move = storage[new.hash]
                 else:
                     eval, _move = new.alpha_beta_pruning(alpha, beta, depth - 1, not max_player)
@@ -319,7 +323,9 @@ if __name__ == '__main__':
         if board.board.turn == True:
             continue
         index+=1
-        print(board.alpha_beta_pruning(-math.inf, math.inf, 4, board.board.turn))        
+        board.alpha_beta_pruning(-math.inf, math.inf, 4, board.board.turn)
+        print(counter)
+        counter=0
         if (index==20):
             break
 
