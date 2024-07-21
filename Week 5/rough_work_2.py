@@ -70,7 +70,10 @@ pst = {
 values = {'p': -100, 'P': 100, 'r': -479, 'R': 479, 'n': -280, 'N': 280, 'b': -320, 'B': 320, 'q': -929, 'Q': 929, 'k': -60000, 'K': 60000, '/': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0}
 
 def value_for_white(board_obj):
-    return total_value
+    if moves_value.get(board_obj.board_fen()) is not None:
+        return moves_value[board_obj.board_fen()]
+    piece_map = board_obj.board_fen()
+    return sum([values[piece] for piece in piece_map])
 
 moves_value = dict()
 def order_moves(board_obj, white_to_play):
@@ -140,7 +143,7 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth):
             return (None, -math.inf)
         else:
             return (None, math.inf)
-    if board_obj.is_game_over():
+    if board_obj.is_stalemate() or board_obj.is_insufficient_material() or board_obj.is_seventyfive_moves() or board_obj.is_fivefold_repetition():
         return (None, 0)
     if depth == 0:
         return (None, total_value)
@@ -161,7 +164,6 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth):
             else:
                 dictionary_of_positions[moved_to] = pst[piece_moved][moved_to] + values[piece_moved]
             total_value -= value_of_piece_captured
-            # total_value += dictionary_of_positions[moved_to] - value_of_piece_moved
             board_obj.push(action)
             _, value = alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1)
             if value > best_value:
@@ -169,7 +171,6 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth):
                 best_move = action
             alpha = max(alpha, best_value)
             board_obj.pop()
-            # total_value -= dictionary_of_positions[moved_to] - value_of_piece_moved
             total_value += value_of_piece_captured
             dictionary_of_positions[moved_from] = value_of_piece_moved
             dictionary_of_positions[moved_to] = value_of_piece_captured
@@ -191,7 +192,6 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth):
             dictionary_of_positions[moved_to] = value_of_piece_moved
             piece_moved = board_obj.piece_at(moved_from).symbol()
             total_value -= value_of_piece_captured
-            # total_value += dictionary_of_positions[moved_to] - value_of_piece_moved
             board_obj.push(action)
             _, value = alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1)
             if value < best_value:
@@ -199,7 +199,6 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth):
                 best_move = action
             beta = min(beta, best_value)
             board_obj.pop()
-            # total_value -= dictionary_of_positions[moved_to] - value_of_piece_moved
             total_value += value_of_piece_captured
             dictionary_of_positions[moved_from] = value_of_piece_moved
             dictionary_of_positions[moved_to] = value_of_piece_captured
@@ -223,6 +222,21 @@ def fill_dictionary_of_positions(board_obj):
         else:
             dictionary_of_positions[position] = 0
 
+def iterative_deepening(board_obj, alpha, beta, max_player_flag, max_depth):
+    best_move = None
+    best_value = -math.inf if max_player_flag else math.inf
+    for depth in range(1, max_depth + 1):
+        move, value = solve_alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth)
+        if max_player_flag:
+            if value > best_value:
+                best_value = value
+                best_move = move
+        else:
+            if value < best_value:
+                best_value = value
+                best_move = move
+    return best_move, best_value
+
 def solve_alpha_beta_pruning(history_obj, alpha, beta, max_player_flag, depth=3):
     global visited_histories_list
     fill_dictionary_of_positions(history_obj)
@@ -238,7 +252,7 @@ if __name__ == "__main__":
         if board.turn == True:
             continue
         index += 1
-        best_move, best_value = solve_alpha_beta_pruning(board, -math.inf, math.inf, board.turn, 6)
+        best_move, best_value = iterative_deepening(board, -math.inf, math.inf, board.turn, 6)
         print(f"Best move: {best_move}, Utility: {best_value}")
         print("Number of calls: ", counter)
         counter = 0
