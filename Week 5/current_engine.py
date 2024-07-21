@@ -230,17 +230,26 @@ def solve_alpha_beta_pruning(history_obj, alpha, beta, max_player_flag, depth=3)
 
 if __name__ == "__main__":
     initialize_zobrist_table()
-    with open("mate_in_3.json", "r") as f:
-        mate_in_two = json.load(f)
-    index = 0
-    for key, value in mate_in_two.items():
-        board = chess.Board(key)
-        if board.turn == True:
-            continue
-        index += 1
+    initial_uci=input().strip()
+    board = chess.Board()
+    board.set_fen(initial_uci)
+    while not board.is_game_over():
         best_move, best_value = solve_alpha_beta_pruning(board, -math.inf, math.inf, board.turn, 6)
-        print(f"Best move: {best_move}, Utility: {best_value}")
-        print("Number of calls: ", counter)
-        counter = 0
-        if index == 20:
-            break
+        print(best_move)
+        board.push(best_move)
+        opponent_mov=input().strip()
+        board.push(chess.Move.from_uci(opponent_mov))
+    # with open("mate_in_3.json", "r") as f:
+    #     mate_in_two = json.load(f)
+    # index = 0
+    # for key, value in mate_in_two.items():
+    #     board = chess.Board(key)
+    #     if board.turn == True:
+    #         continue
+    #     index += 1
+    #     best_move, best_value = solve_alpha_beta_pruning(board, -math.inf, math.inf, board.turn, 6)
+    #     print(f"Best move: {best_move}, Utility: {best_value}")
+    #     print("Number of calls: ", counter)
+    #     counter = 0
+    #     if index == 20:
+    #         break
