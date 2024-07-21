@@ -13,59 +13,7 @@ dictionary_of_positions={}
 total_value=0
 counter=0
 
-pst = {
-'P' : (0, 0, 0, 0, 0, 0, 0, 0,
--31, 8, -7, -37, -36, -14, 3, -31,
--22, 9, 5, -11, -10, -2, 3, -19,
--26, 3, 10, 9, 6, 1, 0, -23,
--17, 16, -2, 15, 14, 0, 15, -13,
-7, 29, 21, 44, 40, 31, 44, 7,
-78, 83, 86, 73, 102, 82, 85, 90,
-0, 0, 0, 0, 0, 0, 0, 0),
-'N' : (-74, -23, -26, -24, -19, -35, -22, -69,
--23, -15, 2, 0, 2, 0, -23, -20,
--18, 10, 13, 22, 18, 15, 11, -14,
--1, 5, 31, 21, 22, 35, 2, 0,
-24, 24, 45, 37, 33, 41, 25, 17,
-10, 67, 1, 74, 73, 27, 62, -2,
--3, -6, 100, -36, 4, 62, -4, -14,
--66, -53, -75, -75, -10, -55, -58, -70),
-'B' : (-7, 2, -15, -12, -14, -15, -10, -10,
-19, 20, 11, 6, 7, 6, 20, 16,
-14, 25, 24, 15, 8, 25, 20, 15,
-13, 10, 17, 23, 17, 16, 0, 7,
-25, 17, 20, 34, 26, 25, 15, 10,
--9, 39, -32, 41, 52, -10, 28, -14,
--11, 20, 35, -42, -39, 31, 2, -22,
--59, -78, -82, -76, -23, -107, -37, -50),
-'R' : (-30, -24, -18, 5, -2, -18, -31, -32,
--53, -38, -31, -26, -29, -43, -44, -53,
--42, -28, -42, -25, -25, -35, -26, -46,
--28, -35, -16, -21, -13, -29, -46, -30,
-0, 5, 16, 13, 18, -4, -9, -6,
-19, 35, 28, 33, 45, 27, 25, 15,
-55, 29, 56, 67, 55, 62, 34, 60,
-35, 29, 33, 4, 37, 33, 56, 50),
-'Q' : (-39, -30, -31, -13, -31, -36, -34, -42,
--36, -18, 0, -19, -15, -15, -21, -38,
--30, -6, -13, -11, -16, -11, -16, -27,
--14, -15, -2, -5, -1, -10, -20, -22,
-1, -16, 22, 17, 25, 20, -13, -6,
--2, 43, 32, 60, 72, 63, 43, 2,
-14, 32, 60, -10, 20, 76, 57, 24,
-6, 1, -8, -104, 69, 24, 88, 26),
-'K' : (17, 30, -3, -14, 6, -1, 40, 18,
--4, 3, -14, -50, -57, -18, 13, 4,
--47, -42, -43, -79, -64, -32, -29, -32,
--55, -43, -52, -28, -51, -47, -8, -50,
--55, 50, 11, -4, -19, 13, 0, -49,
--62, 12, -57, 44, -67, 28, 37, -31,
--32, 10, 55, 56, 56, 55, 10, 3,
-4, 54, 47, -99, -99, 60, 83, -62)
-}
-
-values={'p':-100,'P':100,'r':-479,'R':479,'n':-280,'N':280,'b':-320,'B':320,'q':-929,'Q':929,'k':-60000,'K':60000,'/':0,'1':0,'2':0,'3':0,'4':0,'5':0,'6':0,'7':0,'8':0}
-
+values={'p':-1,'P':1,'r':-10,'R':10,'n':-6,'N':6,'b':-6,'B':6,'q':-50,'Q':50,'k':-1000,'K':1000,'/':0,'1':0,'2':0,'3':0,'4':0,'5':0,'6':0,'7':0,'8':0}
 def value_for_white(board_obj):
     if moves_value.get(board_obj.board_fen()) is not None:
         return moves_value[board_obj.board_fen()]
@@ -87,7 +35,8 @@ def order_moves(board_obj, white_to_play):
             return [action]
         moves_value[move] = len(list(board_obj.legal_moves))
         board_obj.pop()
-        moves_value[move]*=1000000
+        resulting_list.append(action)
+        moves_value[move]*=1000
         if len(move) == 5:
             if (move[-1] == 'r' or move[-1]=="b" or move[-1] =="n"):
                 continue
@@ -96,14 +45,7 @@ def order_moves(board_obj, white_to_play):
                     moves_value[move]-=values['Q']
                 else:
                     moves_value[move]+=values['Q']
-        resulting_list.append(action)
-        symbol=board_obj.piece_at(chess.parse_square(move[2:4]))
-        if symbol is not None:
-            if 'a' <= symbol.symbol() <= 'z':
-                moves_value[move]-=pst[symbol.symbol().upper()][63-chess.parse_square(move[2:4])]+values[symbol.symbol()]
-            else:
-                moves_value[move]+=pst[symbol.symbol()][chess.parse_square(move[2:4])]+values[symbol.symbol()]
-        # moves_value[move]+=dictionary_of_positions[chess.parse_square(move[2:4])]
+        moves_value[move]+=dictionary_of_positions[chess.parse_square(move[2:4])]
     return list(sorted(resulting_list, key=lambda action: moves_value[str(action)]))
 
 
@@ -144,12 +86,7 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
             value_of_piece_captured=dictionary_of_positions[moved_to]
             value_of_piece_moved=dictionary_of_positions[moved_from]
             dictionary_of_positions[moved_from]=0
-            # dictionary_of_positions[moved_to]=value_of_piece_moved
-            piece_moved=board_obj.piece_at(moved_from).symbol()
-            if piece_moved.islower():
-                dictionary_of_positions[moved_to]=-pst[piece_moved.upper()][63-moved_to]+values[piece_moved]
-            else:
-                dictionary_of_positions[moved_to]=pst[piece_moved][moved_to]+values[piece_moved]
+            dictionary_of_positions[moved_to]=value_of_piece_moved
             total_value-=value_of_piece_captured
             board_obj.push(action)
             best=max(best, alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1))
@@ -171,11 +108,6 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
             value_of_piece_moved=dictionary_of_positions[moved_from]
             dictionary_of_positions[moved_from]=0
             dictionary_of_positions[moved_to]=value_of_piece_moved
-            piece_moved=board_obj.piece_at(moved_from).symbol()
-            # if piece_moved.islower():
-            #     dictionary_of_positions[moved_to]=-pst[piece_moved.upper()][63-moved_to]
-            # else:
-            #     dictionary_of_positions[moved_to]=pst[piece_moved][moved_to]
             total_value-=value_of_piece_captured
             board_obj.push(action)
             best=min(best, alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1))
@@ -193,12 +125,8 @@ def fill_dictionary_of_positions(board_obj):
     total_value=0
     for position in range(64):
         if board_obj.piece_at(position) is not None:
-            symbol=board_obj.piece_at(position).symbol()
-            if 'a' <= symbol <= 'z':
-                dictionary_of_positions[position]=-pst[symbol.upper()][63-position]+values[symbol]
-            else:
-                dictionary_of_positions[position]=pst[symbol][position]+values[symbol]
-            # dictionary_of_positions[position]=values[board_obj.piece_at(position).symbol()]
+            dictionary_of_positions[position]=\
+                values[board_obj.piece_at(position).symbol()]
             total_value+=dictionary_of_positions[position]
         else:
             dictionary_of_positions[position]=0
@@ -215,7 +143,7 @@ if __name__ == "__main__":
     index=0
     for key, value in mate_in_two.items():
         board=chess.Board(key)
-        if board.turn == False:
+        if board.turn == True:
             continue
         index+=1
         print(solve_alpha_beta_pruning(board, -math.inf, math.inf, board.turn, 6))

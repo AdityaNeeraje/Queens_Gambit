@@ -13,6 +13,7 @@ dictionary_of_positions={}
 total_value=0
 counter=0
 
+piece = {"P": 100, "N": 280, "B": 320, "R": 479, "Q": 929, "K": 60000}
 pst = {
 'P' : (0, 0, 0, 0, 0, 0, 0, 0,
 -31, 8, -7, -37, -36, -14, 3, -31,
@@ -97,13 +98,7 @@ def order_moves(board_obj, white_to_play):
                 else:
                     moves_value[move]+=values['Q']
         resulting_list.append(action)
-        symbol=board_obj.piece_at(chess.parse_square(move[2:4]))
-        if symbol is not None:
-            if 'a' <= symbol.symbol() <= 'z':
-                moves_value[move]-=pst[symbol.symbol().upper()][63-chess.parse_square(move[2:4])]+values[symbol.symbol()]
-            else:
-                moves_value[move]+=pst[symbol.symbol()][chess.parse_square(move[2:4])]+values[symbol.symbol()]
-        # moves_value[move]+=dictionary_of_positions[chess.parse_square(move[2:4])]
+        moves_value[move]+=dictionary_of_positions[chess.parse_square(move[2:4])]
     return list(sorted(resulting_list, key=lambda action: moves_value[str(action)]))
 
 
@@ -144,17 +139,19 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
             value_of_piece_captured=dictionary_of_positions[moved_to]
             value_of_piece_moved=dictionary_of_positions[moved_from]
             dictionary_of_positions[moved_from]=0
-            # dictionary_of_positions[moved_to]=value_of_piece_moved
-            piece_moved=board_obj.piece_at(moved_from).symbol()
-            if piece_moved.islower():
-                dictionary_of_positions[moved_to]=-pst[piece_moved.upper()][63-moved_to]+values[piece_moved]
-            else:
-                dictionary_of_positions[moved_to]=pst[piece_moved][moved_to]+values[piece_moved]
+            dictionary_of_positions[moved_to]=value_of_piece_moved
+            # piece_moved=board_obj.piece_at(moved_from).symbol()
+            # if piece_moved.islower():
+            #     dictionary_of_positions[moved_to]=-pst[piece_moved.upper()][63-moved_to]+values[piece_moved]
+            # else:
+            #     dictionary_of_positions[moved_to]=pst[piece_moved][moved_to]+values[piece_moved]
             total_value-=value_of_piece_captured
+            # total_value+=dictionary_of_positions[moved_to]-value_of_piece_moved
             board_obj.push(action)
             best=max(best, alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1))
             alpha=max(alpha, best)
             board_obj.pop()
+            # total_value-=dictionary_of_positions[moved_to]-value_of_piece_moved
             total_value+=value_of_piece_captured
             dictionary_of_positions[moved_from]=value_of_piece_moved
             dictionary_of_positions[moved_to]=value_of_piece_captured
@@ -171,16 +168,18 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
             value_of_piece_moved=dictionary_of_positions[moved_from]
             dictionary_of_positions[moved_from]=0
             dictionary_of_positions[moved_to]=value_of_piece_moved
-            piece_moved=board_obj.piece_at(moved_from).symbol()
+            # piece_moved=board_obj.piece_at(moved_from).symbol()
             # if piece_moved.islower():
-            #     dictionary_of_positions[moved_to]=-pst[piece_moved.upper()][63-moved_to]
+            #     dictionary_of_positions[moved_to]=-pst[piece_moved.upper()][63-moved_to]+values[piece_moved]
             # else:
-            #     dictionary_of_positions[moved_to]=pst[piece_moved][moved_to]
+            #     dictionary_of_positions[moved_to]=pst[piece_moved][moved_to]+values[piece_moved]
             total_value-=value_of_piece_captured
+            # total_value+=dictionary_of_positions[moved_to]-value_of_piece_moved
             board_obj.push(action)
             best=min(best, alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1))
             beta=min(beta, best)
             board_obj.pop()
+            # total_value-=dictionary_of_positions[moved_to]-value_of_piece_moved
             total_value+=value_of_piece_captured
             dictionary_of_positions[moved_from]=value_of_piece_moved
             dictionary_of_positions[moved_to]=value_of_piece_captured
