@@ -230,7 +230,7 @@ def solve_alpha_beta_pruning(history_obj, alpha, beta, max_player_flag, depth=3)
 
 if __name__ == "__main__":
     initialize_zobrist_table()
-    with open("mate_in_2.json", "r") as f:
+    with open("mate_in_3.json", "r") as f:
         mate_in_two = json.load(f)
     index = 0
     for key, value in mate_in_two.items():
