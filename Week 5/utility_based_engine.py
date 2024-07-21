@@ -1,9 +1,10 @@
-import copy  # use it for deepcopy if needed
+import copy
 import math
 import logging
 import json
 import sys
 import chess
+import random
 from chess import Move
 
 board_positions_val_dict = {}
@@ -12,6 +13,8 @@ winning_moves = {}
 dictionary_of_positions = {}
 total_value = 0
 counter = 0
+transposition_table = {}
+zobrist_table = {}
 
 pst = {
     'P': (0, 0, 0, 0, 0, 0, 0, 0,
@@ -67,10 +70,7 @@ pst = {
 values = {'p': -100, 'P': 100, 'r': -479, 'R': 479, 'n': -280, 'N': 280, 'b': -320, 'B': 320, 'q': -929, 'Q': 929, 'k': -60000, 'K': 60000, '/': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0}
 
 def value_for_white(board_obj):
-    if moves_value.get(board_obj.board_fen()) is not None:
-        return moves_value[board_obj.board_fen()]
-    piece_map = board_obj.board_fen()
-    return sum([values[piece] for piece in piece_map])
+    return total_value
 
 moves_value = dict()
 def order_moves(board_obj, white_to_play):
@@ -105,27 +105,49 @@ def order_moves(board_obj, white_to_play):
                 moves_value[move] += pst[symbol.symbol()][chess.parse_square(move[2:4])] + values[symbol.symbol()]
     return list(sorted(resulting_list, key=lambda action: moves_value[str(action)]))
 
-def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
-    global dictionary_of_positions, total_value, counter
+def initialize_zobrist_table():
+    global zobrist_table
+    pieces = ['p', 'r', 'n', 'b', 'q', 'k', 'P', 'R', 'N', 'B', 'Q', 'K']
+    zobrist_table = {i: {piece: random.randint(0, 2**64 - 1) for piece in pieces} for i in range(64)}
+
+def compute_zobrist_hash(board_obj):
+    hash_value = 0
+    for i in range(64):
+        piece = board_obj.piece_at(i)
+        if piece:
+            hash_value ^= zobrist_table[i][piece.symbol()]
+    return hash_value
+
+def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth):
+    global counter, transposition_table, total_value
     counter += 1
-    if depth == 0:
-        if board_obj.turn == max_player_flag:
-            result = total_value
-            return (None, result)
+    
+    zobrist_hash = compute_zobrist_hash(board_obj)
+    if zobrist_hash in transposition_table:
+        entry = transposition_table[zobrist_hash]
+        if entry['depth'] >= depth:
+            if entry['flag'] == 'exact':
+                return (entry['move'], entry['value'])
+            elif entry['flag'] == 'lowerbound':
+                alpha = max(alpha, entry['value'])
+            elif entry['flag'] == 'upperbound':
+                beta = min(beta, entry['value'])
+            if alpha >= beta:
+                return (entry['move'], entry['value'])
+
+    if board_obj.is_checkmate():
+        if max_player_flag:
+            return (None, -math.inf)
         else:
-            result = -total_value
-            return (None, result)
+            return (None, math.inf)
     if board_obj.is_game_over():
-        if board_obj.is_checkmate():
-            if max_player_flag:
-                return (None, -math.inf)
-            else:
-                return (None, math.inf)
-        if board_obj.is_stalemate():
-            return (None, 0)
-    best_move = None
+        return (None, 0)
+    if depth == 0:
+        return (None, total_value)
+
     if max_player_flag:
         best_value = -math.inf
+        best_move = None
         for action in order_moves(board_obj, max_player_flag):
             move = str(action)
             moved_from = chess.parse_square(move[0:2])
@@ -139,6 +161,7 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
             else:
                 dictionary_of_positions[moved_to] = pst[piece_moved][moved_to] + values[piece_moved]
             total_value -= value_of_piece_captured
+            total_value += dictionary_of_positions[moved_to] - value_of_piece_moved
             board_obj.push(action)
             _, value = alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1)
             if value > best_value:
@@ -146,14 +169,18 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
                 best_move = action
             alpha = max(alpha, best_value)
             board_obj.pop()
+            total_value -= dictionary_of_positions[moved_to] - value_of_piece_moved
             total_value += value_of_piece_captured
             dictionary_of_positions[moved_from] = value_of_piece_moved
             dictionary_of_positions[moved_to] = value_of_piece_captured
             if beta <= alpha:
                 break
+        flag = 'exact' if alpha == best_value and beta == best_value else 'lowerbound' if best_value <= alpha else 'upperbound'
+        transposition_table[zobrist_hash] = {'move': best_move, 'value': best_value, 'depth': depth, 'flag': flag}
         return (best_move, best_value)
     else:
         best_value = math.inf
+        best_move = None
         for action in order_moves(board_obj, max_player_flag):
             move = str(action)
             moved_from = chess.parse_square(move[0:2])
@@ -164,6 +191,7 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
             dictionary_of_positions[moved_to] = value_of_piece_moved
             piece_moved = board_obj.piece_at(moved_from).symbol()
             total_value -= value_of_piece_captured
+            total_value += dictionary_of_positions[moved_to] - value_of_piece_moved
             board_obj.push(action)
             _, value = alpha_beta_pruning(board_obj, alpha, beta, not max_player_flag, depth-1)
             if value < best_value:
@@ -171,11 +199,14 @@ def alpha_beta_pruning(board_obj, alpha, beta, max_player_flag, depth=3):
                 best_move = action
             beta = min(beta, best_value)
             board_obj.pop()
+            total_value -= dictionary_of_positions[moved_to] - value_of_piece_moved
             total_value += value_of_piece_captured
             dictionary_of_positions[moved_from] = value_of_piece_moved
             dictionary_of_positions[moved_to] = value_of_piece_captured
             if beta <= alpha:
                 break
+        flag = 'exact' if alpha == best_value and beta == best_value else 'lowerbound' if best_value <= alpha else 'upperbound'
+        transposition_table[zobrist_hash] = {'move': best_move, 'value': best_value, 'depth': depth, 'flag': flag}
         return (best_move, best_value)
 
 def fill_dictionary_of_positions(board_obj):
@@ -198,6 +229,7 @@ def solve_alpha_beta_pruning(history_obj, alpha, beta, max_player_flag, depth=3)
     return alpha_beta_pruning(history_obj, alpha, beta, max_player_flag, depth)
 
 if __name__ == "__main__":
+    initialize_zobrist_table()
     with open("mate_in_2.json", "r") as f:
         mate_in_two = json.load(f)
     index = 0
